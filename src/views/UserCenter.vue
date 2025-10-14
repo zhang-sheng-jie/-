@@ -570,7 +570,9 @@ export default {
 }
 
 .comments-list {
-  space-y: 20px;
+  .comment-item:not(:last-child) {
+    margin-bottom: 20px;
+  }
 }
 
 .comment-item {
