@@ -229,7 +229,7 @@ export default createStore({
     },
 
     // 投稿相关
-    async submitPoem({ commit, state }, poemData) {
+    async submitPoem({ commit, state, dispatch }, poemData) {
       if (!state.user) throw new Error('请先登录')
       
       commit('SET_LOADING', true)
@@ -238,6 +238,8 @@ export default createStore({
           ...poemData,
           userId: state.user.id
         })
+        // 投稿成功后自动刷新诗歌列表
+        await dispatch('fetchPoems')
         return result
       } catch (error) {
         commit('SET_ERROR', error.message)

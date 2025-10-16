@@ -73,6 +73,16 @@
               <span class="icon">📤</span>
               <span class="text">分享</span>
             </button>
+            
+            <button 
+              v-if="poem.is_local" 
+              class="action-btn delete" 
+              @click="deleteLocalPoem(poem)" 
+              title="删除"
+            >
+              <span class="icon">🗑️</span>
+              <span class="text">删除</span>
+            </button>
           </div>
         </div>
       </div>
@@ -174,9 +184,35 @@ ${poem.content}`
         navigator.clipboard.writeText(text)
         alert('诗歌内容已复制到剪贴板！')
       }
+    },
+    
+    deleteLocalPoem(poem) {
+      if (confirm(`确定要删除诗歌《${poem.title}》吗？`)) {
+        try {
+          // 从本地存储中删除
+          const key = 'local_poem_submissions'
+          const submissions = JSON.parse(localStorage.getItem(key) || '[]')
+          const updatedSubmissions = submissions.filter(p => p.id !== poem.id)
+          localStorage.setItem(key, JSON.stringify(updatedSubmissions))
+          
+          // 刷新诗歌列表
+          this.$store.dispatch('fetchPoems')
+          alert('诗歌删除成功！')
+        } catch (error) {
+          console.error('删除诗歌失败:', error)
+          alert('删除失败，请稍后重试')
+        }
+      }
     }
   },
   async mounted() {
+    // 页面加载时获取诗歌数据
+    try {
+      await this.$store.dispatch('fetchPoems')
+    } catch (error) {
+      console.error('加载诗歌数据失败:', error)
+    }
+    
     // 如果有高亮参数，滚动到对应诗歌
     if (this.$route.query.highlight) {
       setTimeout(() => {
@@ -463,6 +499,12 @@ ${poem.content}`
     background: #e3f2fd;
     border-color: #42b883;
     color: #42b883;
+  }
+  
+  &.delete:hover {
+    background: #ffeaea;
+    border-color: #ff6b6b;
+    color: #ff6b6b;
   }
   
   &.pulse {

@@ -260,6 +260,8 @@ export default {
         await this.submitPoem(this.contributeForm)
         alert('投稿提交成功！感谢您的贡献。')
         this.resetForm()
+        // 投稿成功后自动跳转到诗歌库查看新投稿的诗歌
+        this.$router.push('/poems')
       } catch (error) {
         alert('投稿失败：' + error.message)
       }
