@@ -81,61 +81,39 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 
 export default {
   name: 'Home',
   data() {
     return {
       currentDate: new Date(),
-      dailyPoems: [
-        {
-          id: 1,
-          title: '静夜思',
-          author: '李白',
-          content: '床前明月光，疑是地上霜。举头望明月，低头思故乡。'
-        },
-        {
-          id: 2,
-          title: '春晓',
-          author: '孟浩然',
-          content: '春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。'
-        },
-        {
-          id: 3,
-          title: '登鹳雀楼',
-          author: '王之涣',
-          content: '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。'
-        },
-        {
-          id: 4,
-          title: '相思',
-          author: '王维',
-          content: '红豆生南国，春来发几枝。愿君多采撷，此物最相思。'
-        },
-        {
-          id: 5,
-          title: '江雪',
-          author: '柳宗元',
-          content: '千山鸟飞绝，万径人踪灭。孤舟蓑笠翁，独钓寒江雪。'
-        }
-      ]
+      dailyPoems: [],
+      popularPoems: []
     }
   },
   computed: {
-    ...mapGetters(['getAllPoems', 'getFavorites']),
+    ...mapGetters(['getAllPoems', 'getFavorites', 'isAuthenticated']),
+    ...mapState(['poems']),
     featuredPoems() {
-      return this.getAllPoems.slice(0, 3)
+      return this.poems.slice(0, 3)
     },
     dailyPoem() {
+      if (this.poems.length === 0) {
+        return {
+          title: '静夜思',
+          author: '李白',
+          content: '床前明月光，疑是地上霜。举头望明月，低头思故乡。'
+        }
+      }
       // 根据日期选择不同的诗句
       const dayOfMonth = this.currentDate.getDate()
-      const poemIndex = (dayOfMonth - 1) % this.dailyPoems.length
-      return this.dailyPoems[poemIndex]
+      const poemIndex = (dayOfMonth - 1) % this.poems.length
+      return this.poems[poemIndex] || this.poems[0]
     }
   },
   methods: {
-    ...mapActions(['addToFavorites', 'removeFromFavorites']),
+    ...mapActions(['addToFavorites', 'removeFromFavorites', 'fetchPoems']),
     scrollToFeatured() {
       this.$refs.featuredSection.scrollIntoView({ 
         behavior: 'smooth',
@@ -155,7 +133,7 @@ export default {
       if (this.isFavorite(poem.id)) {
         this.removeFromFavorites(poem.id)
       } else {
-        this.addToFavorites(poem)
+        this.addToFavorites(poem.id)
       }
     },
     sharePoem() {
@@ -173,6 +151,11 @@ export default {
       } else {
         alert(text)
       }
+    }
+  },
+  async mounted() {
+    if (this.poems.length === 0) {
+      await this.fetchPoems()
     }
   }
 }

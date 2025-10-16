@@ -1,116 +1,261 @@
 import { createStore } from 'vuex'
+import { AuthService } from '../services/auth'
+import { PoemService } from '../services/poemService'
 
 export default createStore({
   state: {
-    poems: [
-      {
-        id: 1,
-        title: '静夜思',
-        author: '李白',
-        content: '床前明月光，疑是地上霜。举头望明月，低头思故乡。',
-        dynasty: '唐代'
-      },
-      {
-        id: 2,
-        title: '春晓',
-        author: '孟浩然',
-        content: '春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。',
-        dynasty: '唐代'
-      },
-      {
-        id: 3,
-        title: '登鹳雀楼',
-        author: '王之涣',
-        content: '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。',
-        dynasty: '唐代'
-      },
-      {
-        id: 4,
-        title: '望庐山瀑布',
-        author: '李白',
-        content: '日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。',
-        dynasty: '唐代'
-      },
-      {
-        id: 5,
-        title: '相思',
-        author: '王维',
-        content: '红豆生南国，春来发几枝。愿君多采撷，此物最相思。',
-        dynasty: '唐代'
-      },
-      {
-        id: 6,
-        title: '江雪',
-        author: '柳宗元',
-        content: '千山鸟飞绝，万径人踪灭。孤舟蓑笠翁，独钓寒江雪。',
-        dynasty: '唐代'
-      },
-      {
-        id: 7,
-        title: '悯农',
-        author: '李绅',
-        content: '锄禾日当午，汗滴禾下土。谁知盘中餐，粒粒皆辛苦。',
-        dynasty: '唐代'
-      },
-      {
-        id: 8,
-        title: '游子吟',
-        author: '孟郊',
-        content: '慈母手中线，游子身上衣。临行密密缝，意恐迟迟归。谁言寸草心，报得三春晖。',
-        dynasty: '唐代'
-      },
-      {
-        id: 9,
-        title: '水调歌头',
-        author: '苏轼',
-        content: '明月几时有？把酒问青天。不知天上宫阙，今夕是何年。我欲乘风归去，又恐琼楼玉宇，高处不胜寒。起舞弄清影，何似在人间。',
-        dynasty: '宋代'
-      },
-      {
-        id: 10,
-        title: '声声慢',
-        author: '李清照',
-        content: '寻寻觅觅，冷冷清清，凄凄惨惨戚戚。乍暖还寒时候，最难将息。三杯两盏淡酒，怎敌他、晚来风急？雁过也，正伤心，却是旧时相识。',
-        dynasty: '宋代'
-      },
-      {
-        id: 11,
-        title: '青玉案·元夕',
-        author: '辛弃疾',
-        content: '东风夜放花千树，更吹落、星如雨。宝马雕车香满路。凤箫声动，玉壶光转，一夜鱼龙舞。',
-        dynasty: '宋代'
-      },
-      {
-        id: 12,
-        title: '天净沙·秋思',
-        author: '马致远',
-        content: '枯藤老树昏鸦，小桥流水人家，古道西风瘦马。夕阳西下，断肠人在天涯。',
-        dynasty: '元代'
-      }
-    ],
-    favorites: []
+    user: null,
+    poems: [],
+    favorites: [],
+    comments: [],
+    isLoading: false,
+    error: null
   },
   mutations: {
-    ADD_TO_FAVORITES(state, poem) {
-      if (!state.favorites.find(fav => fav.id === poem.id)) {
-        state.favorites.push(poem)
-      }
+    SET_USER(state, user) {
+      state.user = user
     },
-    REMOVE_FROM_FAVORITES(state, poemId) {
-      state.favorites = state.favorites.filter(fav => fav.id !== poemId)
+    SET_POEMS(state, poems) {
+      state.poems = poems
+    },
+    SET_FAVORITES(state, favorites) {
+      state.favorites = favorites
+    },
+    SET_COMMENTS(state, comments) {
+      state.comments = comments
+    },
+    SET_LOADING(state, isLoading) {
+      state.isLoading = isLoading
+    },
+    SET_ERROR(state, error) {
+      state.error = error
+    },
+    ADD_POEM(state, poem) {
+      state.poems.push(poem)
+    },
+    ADD_COMMENT(state, comment) {
+      state.comments.unshift(comment)
     }
   },
   actions: {
-    addToFavorites({ commit }, poem) {
-      commit('ADD_TO_FAVORITES', poem)
+    // 用户认证相关
+    async login({ commit }, { email, password }) {
+      commit('SET_LOADING', true)
+      commit('SET_ERROR', null)
+      try {
+        const data = await AuthService.signIn(email, password)
+        commit('SET_USER', data.user)
+        return data
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
     },
-    removeFromFavorites({ commit }, poemId) {
-      commit('REMOVE_FROM_FAVORITES', poemId)
+
+    async register({ commit }, { email, password, username }) {
+      commit('SET_LOADING', true)
+      commit('SET_ERROR', null)
+      try {
+        const data = await AuthService.signUp(email, password, username)
+        return data
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async logout({ commit }) {
+      commit('SET_LOADING', true)
+      try {
+        await AuthService.signOut()
+        commit('SET_USER', null)
+        commit('SET_FAVORITES', [])
+        commit('SET_COMMENTS', [])
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async checkAuth({ commit }) {
+      try {
+        const user = await AuthService.getCurrentUser()
+        if (user) {
+          commit('SET_USER', {
+            ...user,
+            email: user.email,
+            username: user.user_metadata?.username || user.email?.split('@')[0] || '用户'
+          })
+        } else {
+          commit('SET_USER', null)
+        }
+        return user
+      } catch (error) {
+        console.error('检查认证状态失败:', error)
+        commit('SET_USER', null)
+        commit('SET_ERROR', error.message)
+        return null
+      }
+    },
+
+    // 诗歌相关
+    async fetchPoems({ commit }) {
+      commit('SET_LOADING', true)
+      commit('SET_ERROR', null)
+      try {
+        const poems = await PoemService.getAllPoems()
+        commit('SET_POEMS', poems)
+        return poems
+      } catch (error) {
+        console.error('获取诗歌数据失败:', error)
+        // 如果表不存在，设置空数组而不是抛出错误
+        if (error.message && error.message.includes('relation "poems" does not exist')) {
+          commit('SET_POEMS', [])
+          return []
+        }
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async fetchPoemById({ commit }, id) {
+      commit('SET_LOADING', true)
+      try {
+        const poem = await PoemService.getPoemById(id)
+        return poem
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async searchPoems({ commit }, query) {
+      commit('SET_LOADING', true)
+      try {
+        const poems = await PoemService.searchPoems(query)
+        return poems
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    // 收藏相关
+    async fetchFavorites({ commit, state }) {
+      if (!state.user) return
+      
+      commit('SET_LOADING', true)
+      try {
+        const favorites = await PoemService.getUserFavorites(state.user.id)
+        commit('SET_FAVORITES', favorites)
+        return favorites
+      } catch (error) {
+        console.warn('获取收藏列表失败，使用本地存储:', error.message)
+        // 静默处理错误，设置空数组而不是抛出错误
+        commit('SET_FAVORITES', [])
+        return []
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async addToFavorites({ commit, state, dispatch }, poemId) {
+      if (!state.user) throw new Error('请先登录')
+      
+      try {
+        await PoemService.addFavorite(state.user.id, poemId)
+        await dispatch('fetchFavorites')
+      } catch (error) {
+        console.warn('添加收藏失败，但已使用本地存储:', error.message)
+        // 静默处理错误，不抛出，避免页面显示错误
+        await dispatch('fetchFavorites')
+      }
+    },
+
+    async removeFromFavorites({ commit, state, dispatch }, poemId) {
+      if (!state.user) throw new Error('请先登录')
+      
+      try {
+        await PoemService.removeFavorite(state.user.id, poemId)
+        await dispatch('fetchFavorites')
+      } catch (error) {
+        console.warn('移除收藏失败，但已使用本地存储:', error.message)
+        // 静默处理错误，不抛出，避免页面显示错误
+        await dispatch('fetchFavorites')
+      }
+    },
+
+    // 评论相关
+    async fetchComments({ commit }, poemId) {
+      commit('SET_LOADING', true)
+      try {
+        const comments = await PoemService.getPoemComments(poemId)
+        commit('SET_COMMENTS', comments)
+        return comments
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    async addComment({ commit, state }, { poemId, content }) {
+      if (!state.user) throw new Error('请先登录')
+      
+      commit('SET_LOADING', true)
+      try {
+        const comment = await PoemService.addComment(poemId, state.user.id, content)
+        commit('ADD_COMMENT', comment[0])
+        return comment
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    // 投稿相关
+    async submitPoem({ commit, state }, poemData) {
+      if (!state.user) throw new Error('请先登录')
+      
+      commit('SET_LOADING', true)
+      try {
+        const result = await PoemService.submitPoem({
+          ...poemData,
+          userId: state.user.id
+        })
+        return result
+      } catch (error) {
+        commit('SET_ERROR', error.message)
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
     }
   },
   getters: {
+    isAuthenticated: state => !!state.user,
+    currentUser: state => state.user,
     getAllPoems: state => state.poems,
     getFavorites: state => state.favorites,
-    getPoemById: state => id => state.poems.find(poem => poem.id === id)
+    getComments: state => state.comments,
+    isLoading: state => state.isLoading,
+    getError: state => state.error,
+    getPoemById: state => id => state.poems.find(poem => poem.id === id),
+    isFavorite: state => poemId => state.favorites.some(fav => fav.id === poemId)
   }
 })

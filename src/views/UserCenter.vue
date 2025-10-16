@@ -7,7 +7,8 @@
           <div class="avatar-placeholder">👤</div>
         </div>
         <div class="user-info">
-          <h1 class="user-name">诗歌爱好者</h1>
+          <h1 class="user-name">{{ userName }}</h1>
+          <p class="user-email">{{ userEmail }}</p>
           <p class="user-stats">已收藏 {{ favorites.length }} 首诗歌</p>
         </div>
       </div>
@@ -86,7 +87,7 @@
             
             <div v-else class="comments-list">
               <div 
-                v-for="comment in comments" 
+                v-for="comment in userComments" 
                 :key="comment.id" 
                 class="comment-item"
               >
@@ -170,7 +171,7 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 
 export default {
   name: 'UserCenter',
@@ -184,14 +185,7 @@ export default {
         dynasty: '',
         content: ''
       },
-      comments: [
-        {
-          id: 1,
-          poemTitle: '静夜思',
-          content: '这首诗表达了游子思乡之情，意境深远。',
-          time: '2024-01-15'
-        }
-      ],
+      comments: [],
       tabs: [
         { id: 'favorites', name: '我的收藏', icon: '⭐' },
         { id: 'comments', name: '我的评论', icon: '💬' },
@@ -200,13 +194,23 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['getFavorites']),
+    ...mapGetters(['getFavorites', 'isAuthenticated']),
+    ...mapState(['user']),
     favorites() {
       return this.getFavorites
+    },
+    userEmail() {
+      return this.user?.email || '诗歌爱好者'
+    },
+    userName() {
+      return this.user?.user_metadata?.username || this.user?.email?.split('@')[0] || '诗歌爱好者'
+    },
+    userComments() {
+      return this.comments
     }
   },
   methods: {
-    ...mapActions(['removeFromFavorites']),
+    ...mapActions(['removeFromFavorites', 'fetchFavorites', 'addComment', 'submitPoem']),
     viewPoem(poem) {
       this.$router.push({ 
         name: 'Poems',
@@ -218,26 +222,46 @@ export default {
     },
     submitComment() {
       if (this.newComment.trim()) {
-        this.comments.unshift({
-          id: Date.now(),
-          poemTitle: '新评论',
-          content: this.newComment,
-          time: new Date().toLocaleDateString()
-        })
-        this.newComment = ''
+        try {
+          this.comments.unshift({
+            id: Date.now(),
+            poemTitle: '新评论',
+            content: this.newComment,
+            time: new Date().toLocaleDateString()
+          })
+          this.newComment = ''
+        } catch (error) {
+          console.error('发表评论失败:', error)
+          alert('发表评论失败，请稍后重试')
+        }
       }
     },
     editComment(comment) {
-      this.newComment = comment.content
-      this.deleteComment(comment.id)
+      try {
+        this.newComment = comment.content
+        this.deleteComment(comment.id)
+      } catch (error) {
+        console.error('编辑评论失败:', error)
+        alert('编辑评论失败，请稍后重试')
+      }
     },
     deleteComment(commentId) {
-      this.comments = this.comments.filter(c => c.id !== commentId)
+      try {
+        this.comments = this.comments.filter(c => c.id !== commentId)
+      } catch (error) {
+        console.error('删除评论失败:', error)
+        alert('删除评论失败，请稍后重试')
+      }
     },
-    submitContribution() {
-      if (this.validateForm()) {
+    async submitContribution() {
+      if (!this.validateForm()) return
+      
+      try {
+        await this.submitPoem(this.contributeForm)
         alert('投稿提交成功！感谢您的贡献。')
         this.resetForm()
+      } catch (error) {
+        alert('投稿失败：' + error.message)
       }
     },
     validateForm() {
@@ -265,6 +289,27 @@ export default {
         author: '',
         dynasty: '',
         content: ''
+      }
+    }
+  },
+  async mounted() {
+    if (this.isAuthenticated) {
+      try {
+        await this.fetchFavorites()
+      } catch (error) {
+        console.error('获取收藏列表失败:', error)
+        // 静默处理错误，避免页面崩溃
+      }
+    }
+  },
+  watch: {
+    isAuthenticated: {
+      immediate: true,
+      handler(isAuthenticated) {
+        // 路由守卫已经处理了认证检查，这里作为备用检查
+        if (!isAuthenticated) {
+          this.$router.push('/')
+        }
       }
     }
   }
@@ -334,8 +379,15 @@ export default {
 .user-info {
   .user-name {
     font-size: 2.5rem;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     font-weight: 700;
+  }
+  
+  .user-email {
+    font-size: 1.1rem;
+    opacity: 0.8;
+    margin-bottom: 10px;
+    color: rgba(255, 255, 255, 0.9);
   }
   
   .user-stats {

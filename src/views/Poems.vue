@@ -29,7 +29,7 @@
           
           <div class="search-stats">
             <span v-if="searchQuery">找到 {{ filteredPoems.length }} 首诗歌</span>
-            <span v-else>共 {{ getAllPoems.length }} 首诗歌</span>
+            <span v-else>共 {{ poems ? poems.length : 0 }} 首诗歌</span>
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@
             <button 
               class="action-btn favorite"
               :class="{ active: isFavorite(poem.id) }"
-              @click="toggleFavorite(poem)"
+              @click="toggleFavorite(poem, $event)"
               :title="isFavorite(poem.id) ? '取消收藏' : '收藏'"
             >
               <span class="icon">{{ isFavorite(poem.id) ? '❤️' : '🤍' }}</span>
@@ -81,40 +81,55 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapState } from 'vuex'
 
 export default {
   name: 'Poems',
   data() {
     return {
       searchQuery: '',
-      searchTimeout: null
+      searchTimeout: null,
+      isSearching: false
     }
   },
   computed: {
-    ...mapGetters(['getAllPoems', 'getFavorites']),
+    ...mapGetters(['getFavorites', 'isAuthenticated']),
+    ...mapState(['poems', 'isLoading']),
     filteredPoems() {
+      if (!this.poems || !Array.isArray(this.poems)) {
+        return []
+      }
+      
       if (!this.searchQuery) {
-        return this.getAllPoems
+        return this.poems
       }
       
       const query = this.searchQuery.toLowerCase()
-      return this.getAllPoems.filter(poem => 
-        poem.title.toLowerCase().includes(query) ||
-        poem.author.toLowerCase().includes(query) ||
-        poem.dynasty.toLowerCase().includes(query) ||
-        poem.content.toLowerCase().includes(query)
+      return this.poems.filter(poem => 
+        poem && poem.title && poem.title.toLowerCase().includes(query) ||
+        poem && poem.author && poem.author.toLowerCase().includes(query) ||
+        poem && poem.dynasty && poem.dynasty.toLowerCase().includes(query) ||
+        poem && poem.content && poem.content.toLowerCase().includes(query)
       )
     }
   },
   methods: {
-    ...mapActions(['addToFavorites', 'removeFromFavorites']),
-    handleSearch() {
+    ...mapActions(['addToFavorites', 'removeFromFavorites', 'searchPoems']),
+    async handleSearch() {
       // 防抖搜索
       clearTimeout(this.searchTimeout)
-      this.searchTimeout = setTimeout(() => {
-        // 搜索逻辑已经在 computed 中处理
-      }, 300)
+      this.searchTimeout = setTimeout(async () => {
+        if (this.searchQuery.trim()) {
+          this.isSearching = true
+          try {
+            await this.searchPoems(this.searchQuery)
+          } catch (error) {
+            console.error('搜索失败:', error)
+          } finally {
+            this.isSearching = false
+          }
+        }
+      }, 500)
     },
     clearSearch() {
       this.searchQuery = ''
@@ -125,17 +140,22 @@ export default {
     isHighlighted(poemId) {
       return this.$route.query.highlight === poemId.toString()
     },
-    toggleFavorite(poem) {
-      if (this.isFavorite(poem.id)) {
-        this.removeFromFavorites(poem.id)
-      } else {
-        this.addToFavorites(poem)
-        // 添加收藏动画效果
-        const btn = event.target.closest('.action-btn')
-        if (btn) {
-          btn.classList.add('pulse')
-          setTimeout(() => btn.classList.remove('pulse'), 600)
+    async toggleFavorite(poem, event) {
+      try {
+        if (this.isFavorite(poem.id)) {
+          await this.removeFromFavorites(poem.id)
+        } else {
+          await this.addToFavorites(poem.id)
+          // 添加收藏动画效果
+          const btn = event?.target?.closest('.action-btn')
+          if (btn) {
+            btn.classList.add('pulse')
+            setTimeout(() => btn.classList.remove('pulse'), 600)
+          }
         }
+      } catch (error) {
+        console.error('收藏操作失败:', error)
+        // 静默处理错误，不显示弹窗
       }
     },
     sharePoem(poem) {
@@ -156,7 +176,7 @@ ${poem.content}`
       }
     }
   },
-  mounted() {
+  async mounted() {
     // 如果有高亮参数，滚动到对应诗歌
     if (this.$route.query.highlight) {
       setTimeout(() => {
