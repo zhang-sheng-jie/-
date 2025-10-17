@@ -14,6 +14,9 @@
             <router-link to="/user" class="nav-link">用户中心</router-link>
           </li>
           <li class="nav-item">
+            <router-link to="/ai-analysis" class="nav-link">AI鉴赏</router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/about" class="nav-link">关于</router-link>
           </li>
         </ul>

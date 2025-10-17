@@ -23,6 +23,11 @@ const routes = [
     name: 'UserCenter',
     component: () => import('../views/UserCenter.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/ai-analysis',
+    name: 'AIAnalysis',
+    component: () => import('../views/AIAnalysis.vue')
   }
 ]
 
