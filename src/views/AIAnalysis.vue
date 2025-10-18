@@ -5,7 +5,6 @@
         <h1 class="page-title">AI对话交互</h1>
         <p class="page-subtitle">直接向AI发送查询请求</p>
       </div>
-
       <div class="analysis-form">
         <div class="form-group">
           <label for="query" class="form-label">查询内容</label>
@@ -13,12 +12,11 @@
             id="query"
             v-model="formData.query"
             class="form-textarea"
-            placeholder="请输入想和我探讨的诗词内容（例如：将进酒的主旨）"
+            placeholder="请输入查询内容（例如：静夜思的分析）"
             rows="6"
             @input="clearResult"
           ></textarea>
         </div>
-
         <div class="form-actions">
           <button
             class="analyze-btn"
@@ -31,7 +29,6 @@
           </button>
         </div>
       </div>
-
       <div v-if="responseResult" class="analysis-result">
         <h2 class="result-title">响应结果</h2>
         <div class="result-content" v-html="formatResponse(responseResult)"></div>
@@ -42,21 +39,23 @@
 
 <script>
 import axios from 'axios';
-import { marked } from 'marked';
+import { marked } from 'marked'; // 引入 marked 库来解析 Markdown
 
 export default {
   name: 'AIAnalysis',
   data() {
     return {
-      formData: { query: '' },
+      formData: {
+        query: '',
+      },
       isLoading: false,
-      responseResult: null
+      responseResult: null,
     };
   },
   computed: {
     canSubmit() {
       return this.formData.query.trim() !== '';
-    }
+    },
   },
   methods: {
     clearResult() {
@@ -64,57 +63,41 @@ export default {
     },
     async sendRequest() {
       if (!this.canSubmit) return;
-
       this.isLoading = true;
       this.responseResult = null;
 
       try {
         const response = await axios.post(
-          '/api/webhook/4322efde-fd16-42cc-909a-635f14c6b070',
+          '/api/webhook/4322efde-fd16-42cc-909a-635f14c6b070', // 使用代理路径
           {
-            input: this.formData.query
+            query: this.formData.query, // 简化的请求体，发送 query 字段
           },
           {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
             },
-            timeout: 60000 // 延长超时时间至60秒
+            timeout: 60000, // 超时时间 60 秒
           }
         );
-        const payload = response.data;
-        this.responseResult = this.extractOutput(payload);
+
+        // 假设响应格式为 [{ output: "..." }]
+        if (response.data && Array.isArray(response.data) && response.data[0]?.output) {
+          this.responseResult = response.data[0].output;
+        } else {
+          this.responseResult = '响应格式不符合预期';
+        }
       } catch (error) {
         console.error('请求失败:', error);
-        this.responseResult = `### 请求失败
-错误信息: ${error.message || '未知错误'}`;
+        this.responseResult = `### 请求失败\n错误信息: ${error.message || '未知错误'}`;
       } finally {
         this.isLoading = false;
       }
     },
-    extractOutput(data) {
-      try {
-        if (typeof data === 'string') return data;
-        if (Array.isArray(data)) {
-          const item = data.find(d => d && typeof d.output === 'string');
-          if (item) return item.output;
-        }
-        if (data && typeof data.output === 'string') return data.output;
-        if (data && Array.isArray(data.data)) {
-          const item = data.data.find(d => d && typeof d.output === 'string');
-          if (item) return item.output;
-        }
-      } catch (e) {
-        // 忽略解析异常，走兜底
-      }
-      return typeof data === 'string' ? data : '';
-    },
     formatResponse(data) {
-      const text = typeof data === 'string'
-        ? data
-        : this.extractOutput(data) || JSON.stringify(data, null, 2);
-      return marked.parse(text);
-    }
-  }
+      // 使用 marked 解析 Markdown 内容
+      return typeof data === 'string' ? marked(data) : JSON.stringify(data, null, 2);
+    },
+  },
 };
 </script>
 
@@ -134,14 +117,14 @@ export default {
 .page-header {
   text-align: center;
   margin-bottom: 40px;
-  
+
   .page-title {
     font-size: 2.5rem;
     color: #2c3e50;
     margin-bottom: 10px;
     font-weight: 700;
   }
-  
+
   .page-subtitle {
     font-size: 1.2rem;
     color: #7f8c8d;
@@ -168,8 +151,6 @@ export default {
   font-size: 1rem;
 }
 
-.form-input,
-.form-select,
 .form-textarea {
   width: 100%;
   padding: 12px 15px;
@@ -177,18 +158,15 @@ export default {
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+
   &:focus {
     outline: none;
     border-color: #42b883;
     box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
   }
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 120px;
-  font-family: inherit;
 }
 
 .form-actions {
@@ -208,18 +186,18 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  
+
   &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(66, 184, 131, 0.4);
   }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
   }
-  
+
   &.loading {
     background: #95a5a6;
   }
@@ -246,8 +224,12 @@ export default {
   color: #2c3e50;
   font-size: 1.05rem;
 
-  // Basic Markdown rendering styles (you might want to expand these)
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: #42b883;
     margin-top: 1em;
     margin-bottom: 0.5em;
@@ -257,7 +239,8 @@ export default {
     margin-bottom: 1em;
   }
 
-  ul, ol {
+  ul,
+  ol {
     margin-left: 20px;
     margin-bottom: 1em;
   }
@@ -288,7 +271,7 @@ export default {
   .page-title {
     font-size: 2rem;
   }
-  
+
   .analysis-form,
   .analysis-result {
     padding: 20px;
