@@ -46,6 +46,10 @@
           </div>
         </div>
       </div>
+    <div class="chatbot-entry">
+      <div class="bubble">和我一起进行诗歌赏析吧</div>
+      <button class="robot-btn" @click="$router.push({ name: 'AIAnalysis' })" aria-label="AI诗歌赏析">🤖</button>
+    </div>
     </section>
 
     <section class="featured-poems" ref="featuredSection">
@@ -505,6 +509,50 @@ export default {
     background: #e9ecef;
     transform: translateY(-1px);
   }
+}
+
+.chatbot-entry {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 3;
+}
+
+.chatbot-entry .bubble {
+  background: #ffffff;
+  color: #2c3e50;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.robot-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #42b883;
+  color: #fff;
+  border: none;
+  box-shadow: 0 10px 24px rgba(66, 184, 131, 0.35);
+  cursor: pointer;
+  font-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.robot-btn:hover {
+  transform: translateY(-2px);
+  background: #369670;
+  box-shadow: 0 14px 28px rgba(66, 184, 131, 0.45);
 }
 
 @media (max-width: 768px) {
