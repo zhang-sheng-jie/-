@@ -12,7 +12,7 @@
             id="query"
             v-model="formData.query"
             class="form-textarea"
-            placeholder="请输入查询内容（例如：静夜思的分析）"
+            placeholder="请输入想和我讨论的内容: （例如：静夜思的分析）"
             rows="6"
             @input="clearResult"
           ></textarea>
