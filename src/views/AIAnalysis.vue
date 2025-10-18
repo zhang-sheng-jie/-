@@ -68,7 +68,7 @@ export default {
 
       try {
         const response = await axios.post(
-          '/api/webhook/4322efde-fd16-42cc-909a-635f14c6b070', // 使用代理路径
+          'https://n8n-acfyvstb.ap-northeast-1.clawcloudrun.com/webhook/4322efde-fd16-42cc-909a-635f14c6b070',
           {
             query: this.formData.query, // 简化的请求体，发送 query 字段
           },
